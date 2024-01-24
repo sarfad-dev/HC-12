@@ -1,6 +1,8 @@
 //tx
 #include <Wire.h>
 #include <SPI.h>
+#include <SoftwareSerial.h>
+#include <Arduino.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
@@ -136,7 +138,7 @@ void loop()
       HC12.print(";");
       HC12.print(bme.readPressure() / 100.0F);
       HC12.println();
-      
+
       Serial.print(bme.readTemperature());
       Serial.print(";");
       Serial.print(bme.readHumidity());

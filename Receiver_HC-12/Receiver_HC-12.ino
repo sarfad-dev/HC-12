@@ -21,9 +21,9 @@ void setup()
   // pauza pro spolehlivé nastavení módu
   delay(80);
   // zahájení komunikace po sériové lince
-  Serial.begin(9600);
+  Serial.begin(2400);
   // zahájení komunikace s modulem HC-12
-  HC12.begin(9600, SERIAL_8N1, RXD2, TXD2); // Serial port to HC12
+  HC12.begin(2400, SERIAL_8N1, RXD2, TXD2); // Serial port to HC12
 }
 
 void loop()
