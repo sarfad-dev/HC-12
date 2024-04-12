@@ -5,11 +5,16 @@
 #include <Arduino.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <TinyGPSPlus.h>
 
 #define RXD2 16 //(RX2)
 #define TXD2 17 //(TX2)
 #define pinSet 5 //set
 #define HC12 Serial2 //Hardware serial 2 on the ESP32
+#define txGPS 18 //piny na esp32, u GPS je treba prehodit 
+#define rxGPS 19
+#define GPSBaud 2400
+
 char serialZnak;
 char HC12Znak;
 String serialZprava = "";
@@ -19,10 +24,13 @@ boolean HC12KonecZpravy = false;
 boolean communicationEnabled = true; // Flag to control communication
 
 Adafruit_BME280 bme;
+TinyGPSPlus gps;
+
+SoftwareSerial ssGps(rxGPS, txGPS);
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(2400);
   if (!bme.begin(0x76))
   {
     Serial.println("BME280 sensor not found. Check wiring!");
@@ -32,7 +40,8 @@ void setup()
   pinMode(pinSet, OUTPUT);
   digitalWrite(pinSet, HIGH);
   delay(80);
-  HC12.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  HC12.begin(2400, SERIAL_8N1, RXD2, TXD2);
+  ssGps.begin(GPSBaud);
 }
 
 void loop()
@@ -129,21 +138,45 @@ void loop()
     HC12KonecZpravy = false;
   }
 
-  // BME280 Sensor Data Transmission
+  
   if (communicationEnabled)
     {
+      gps.encode(ssGps.read());
+
+      // BME280 Sensor Data Transmission
       HC12.print(bme.readTemperature());
       HC12.print(";");
       HC12.print(bme.readHumidity());
       HC12.print(";");
       HC12.print(bme.readPressure() / 100.0F);
-      HC12.println();
+      HC12.print(";");
 
+      //GPS info
+      HC12.print(gps.location.lat(), 6);
+      HC12.print(";");
+      HC12.print(gps.location.lng(), 6);
+      HC12.print(";");
+      HC12.print(gps.time.value());
+      HC12.print(";");
+      HC12.print(gps.speed.kmph());
+      HC12.print(";");
+      HC12.print(gps.altitude.meters());
+      HC12.println();
+      
       Serial.print(bme.readTemperature());
       Serial.print(";");
       Serial.print(bme.readHumidity());
       Serial.print(";");
       Serial.print(bme.readPressure() / 100.0F);
+      Serial.print(gps.location.lat(), 6);
+      Serial.print(";");
+      Serial.print(gps.location.lng(), 6);
+      Serial.print(";");
+      Serial.print(gps.time.value());
+      Serial.print(";");
+      Serial.print(gps.speed.kmph());
+      Serial.print(";");
+      Serial.print(gps.altitude.meters());
       Serial.println();
 
       delay(500);
