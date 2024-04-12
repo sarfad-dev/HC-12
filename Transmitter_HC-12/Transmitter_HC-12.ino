@@ -26,7 +26,7 @@ boolean communicationEnabled = true; // Flag to control communication
 Adafruit_BME280 bme;
 TinyGPSPlus gps;
 
-SoftwareSerial ssGps(rxGPS, txGPS);
+SoftwareSerial ssGps(2400, SERIAL_8N1, rxGPS, txGPS);
 
 void setup()
 {
