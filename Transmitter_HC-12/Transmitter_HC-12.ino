@@ -11,9 +11,8 @@
 #define TXD2 17 //(TX2)
 #define pinSet 5 //set
 #define HC12 Serial2 //Hardware serial 2 on the ESP32
-#define txGPS 18 //piny na esp32, u GPS je treba prehodit 
-#define rxGPS 19
-#define GPSBaud 2400
+static const int RXPin = 19, TXPin = 18;
+static const uint32_t GPSBaud = 9600;
 
 char serialZnak;
 char HC12Znak;
@@ -26,11 +25,11 @@ boolean communicationEnabled = true; // Flag to control communication
 Adafruit_BME280 bme;
 TinyGPSPlus gps;
 
-SoftwareSerial ssGps(2400, SERIAL_8N1, rxGPS, txGPS);
+SoftwareSerial ss(RXPin, TXPin);
 
 void setup()
 {
-  Serial.begin(2400);
+  Serial.begin(9600);
   if (!bme.begin(0x76))
   {
     Serial.println("BME280 sensor not found. Check wiring!");
@@ -40,8 +39,8 @@ void setup()
   pinMode(pinSet, OUTPUT);
   digitalWrite(pinSet, HIGH);
   delay(80);
-  HC12.begin(2400, SERIAL_8N1, RXD2, TXD2);
-  ssGps.begin(GPSBaud);
+  HC12.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  ss.begin(GPSBaud);
 }
 
 void loop()
@@ -141,44 +140,66 @@ void loop()
   
   if (communicationEnabled)
     {
-      gps.encode(ssGps.read());
+      if (ss.available() > 0)
+      {
+        if (gps.encode(ss.read()))
+        {
+          if (gps.location.isValid())
+          {
+            HC12.print(bme.readTemperature());
+            HC12.print(";");
+            HC12.print(bme.readHumidity());
+            HC12.print(";");
+            HC12.print(bme.readPressure() / 100.0F);
+            HC12.print(";");
+            HC12.print(gps.location.lat(), 6);
+            HC12.print(F(";"));
+            HC12.print(gps.location.lng(), 6);
+            HC12.print(F(";"));
+            HC12.print(gps.time.hour());
+            HC12.print(F(":"));
+            HC12.print(gps.time.minute());
+            HC12.print(F(":"));
+            HC12.print(gps.time.second());
+            HC12.print(F("."));
+            HC12.print(gps.time.centisecond());
+            HC12.print(";");
+            HC12.print(gps.speed.kmph());
+            HC12.print(";");
+            HC12.print(gps.altitude.meters());
+            HC12.println();
+            
+            Serial.print(bme.readTemperature());
+            Serial.print(";");
+            Serial.print(bme.readHumidity());
+            Serial.print(";");
+            Serial.print(bme.readPressure() / 100.0F);
+            Serial.print(";");
+            Serial.print(gps.location.lat(), 6);
+            Serial.print(F(";"));
+            Serial.print(gps.location.lng(), 6);
+            Serial.print(F(";"));
+            Serial.print(gps.time.hour());
+            Serial.print(F(":"));
+            Serial.print(gps.time.minute());
+            Serial.print(F(":"));
+            Serial.print(gps.time.second());
+            Serial.print(F("."));
+            Serial.print(gps.time.centisecond());
+            Serial.print(";");
+            Serial.print(gps.speed.kmph());
+            Serial.print(";");
+            Serial.print(gps.altitude.meters());
+            Serial.println();
 
-      // BME280 Sensor Data Transmission
-      HC12.print(bme.readTemperature());
-      HC12.print(";");
-      HC12.print(bme.readHumidity());
-      HC12.print(";");
-      HC12.print(bme.readPressure() / 100.0F);
-      HC12.print(";");
-
-      //GPS info
-      HC12.print(gps.location.lat(), 6);
-      HC12.print(";");
-      HC12.print(gps.location.lng(), 6);
-      HC12.print(";");
-      HC12.print(gps.time.value());
-      HC12.print(";");
-      HC12.print(gps.speed.kmph());
-      HC12.print(";");
-      HC12.print(gps.altitude.meters());
-      HC12.println();
-      
-      Serial.print(bme.readTemperature());
-      Serial.print(";");
-      Serial.print(bme.readHumidity());
-      Serial.print(";");
-      Serial.print(bme.readPressure() / 100.0F);
-      Serial.print(gps.location.lat(), 6);
-      Serial.print(";");
-      Serial.print(gps.location.lng(), 6);
-      Serial.print(";");
-      Serial.print(gps.time.value());
-      Serial.print(";");
-      Serial.print(gps.speed.kmph());
-      Serial.print(";");
-      Serial.print(gps.altitude.meters());
-      Serial.println();
-
-      delay(500);
+            delay(100);
+          }
+          else
+          {
+            Serial.println(F("INVALID"));
+          }
+          
+        }
+      }
     }
 }
