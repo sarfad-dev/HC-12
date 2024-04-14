@@ -45,6 +45,7 @@ void setup()
 
 void loop()
 {
+  unsigned long currentTime = millis();
   while (HC12.available())
   {
     HC12Znak = HC12.read();
@@ -138,7 +139,7 @@ void loop()
   }
 
   
-  if (communicationEnabled)
+  if (communicationEnabled && currentTime - lastTransmissionTime >= 500)
     {
       if (ss.available() > 0)
       {
@@ -191,8 +192,6 @@ void loop()
             Serial.print(";");
             Serial.print(gps.altitude.meters());
             Serial.println();
-
-            delay(100);
           }
           else
           {
