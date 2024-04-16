@@ -1,7 +1,7 @@
 //rx
 #define RXD2 16 //(RX2)
 #define TXD2 17 //(TX2)
-#define pinSet 5 //set
+#define pinSet 4 //set
 #define HC12 Serial2 //Hardware serial 2 on the ESP32
 char serialZnak;
 char HC12Znak;

@@ -6,12 +6,18 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <TinyGPSPlus.h>
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
 
 #define RXD2 16 //(RX2)
 #define TXD2 17 //(TX2)
-#define pinSet 5 //set
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define pinSet 4 //set
+#define SD_CS_PIN 5
 #define HC12 Serial2 //Hardware serial 2 on the ESP32
-static const int RXPin = 19, TXPin = 18;
+static const int RXPin = 14, TXPin = 12;
 static const uint32_t GPSBaud = 9600;
 
 char serialZnak;
@@ -21,20 +27,33 @@ String HC12Zprava = "";
 boolean serialKonecZpravy = false;
 boolean HC12KonecZpravy = false;
 boolean communicationEnabled = true; // Flag to control communication
+unsigned long lastTransmissionTime = 0;
 
 Adafruit_BME280 bme;
 TinyGPSPlus gps;
 
 SoftwareSerial ss(RXPin, TXPin);
-
+File dataFile;
 void setup()
 {
   Serial.begin(9600);
-  if (!bme.begin(0x76))
+  Wire.begin(SDA_PIN, SCL_PIN);
+  if (!bme.begin(0x76, &Wire))
   {
     Serial.println("BME280 sensor not found. Check wiring!");
     while (1);
   }
+  if (!SD.begin(SD_CS_PIN)) {
+        Serial.println("SD card initialization failed");
+        return;
+    }
+  // Open or create a file for writing
+  dataFile = SD.open("/data.csv", FILE_WRITE);
+  if (!dataFile) {
+      Serial.println("Error opening data.csv");
+  }
+  // Write header to the file
+  dataFile.println("Temperature;Humidity;Pressure;Latitude;Longitude;Time;Speed;Altitude;");
 
   pinMode(pinSet, OUTPUT);
   digitalWrite(pinSet, HIGH);
@@ -170,6 +189,30 @@ void loop()
             HC12.print(gps.altitude.meters());
             HC12.println();
             
+            dataFile.print(bme.readTemperature());
+            dataFile.print(";");
+            dataFile.print(bme.readHumidity());
+            dataFile.print(";");
+            dataFile.print(bme.readPressure() / 100.0F);
+            dataFile.print(";");
+            dataFile.print(gps.location.lat(), 6);
+            dataFile.print(";");
+            dataFile.print(gps.location.lng(), 6);
+            dataFile.print(";");
+            dataFile.print(gps.time.hour());
+            dataFile.print(":");
+            dataFile.print(gps.time.minute());
+            dataFile.print(":");
+            dataFile.print(gps.time.second());
+            dataFile.print(".");
+            dataFile.print(gps.time.centisecond());
+            dataFile.print(";");
+            dataFile.print(gps.speed.kmph());
+            dataFile.print(";");
+            dataFile.print(gps.altitude.meters());
+            dataFile.println();
+            dataFile.flush();
+
             Serial.print(bme.readTemperature());
             Serial.print(";");
             Serial.print(bme.readHumidity());
@@ -192,6 +235,7 @@ void loop()
             Serial.print(";");
             Serial.print(gps.altitude.meters());
             Serial.println();
+            lastTransmissionTime = currentTime;
           }
           else
           {
