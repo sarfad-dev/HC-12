@@ -1,7 +1,7 @@
 //rx
 #define RXD2 16 //(RX2)
 #define TXD2 17 //(TX2)
-#define pinSet 5 //set
+#define pinSet 4 //set
 #define HC12 Serial2 //Hardware serial 2 on the ESP32
 char serialZnak;
 char HC12Znak;
@@ -21,9 +21,9 @@ void setup()
   // pauza pro spolehlivé nastavení módu
   delay(80);
   // zahájení komunikace po sériové lince
-  Serial.begin(2400);
+  Serial.begin(9600);
   // zahájení komunikace s modulem HC-12
-  HC12.begin(2400, SERIAL_8N1, RXD2, TXD2); // Serial port to HC12
+  HC12.begin(9600, SERIAL_8N1, RXD2, TXD2); // Serial port to HC12
 }
 
 void loop()
