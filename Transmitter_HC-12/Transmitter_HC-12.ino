@@ -1,4 +1,3 @@
-//tx
 #include <Wire.h>
 #include <SPI.h>
 #include <SoftwareSerial.h>
@@ -6,18 +5,18 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <TinyGPSPlus.h>
-#include <FS.h>
 #include <SD.h>
 #include <SPI.h>
+#include <FS.h>
 
-#define RXD2 16 //(RX2)
-#define TXD2 17 //(TX2)
-#define SDA_PIN 21
-#define SCL_PIN 22
-#define pinSet 4 //set
+#define HC12_Rx 16
+#define HC12_Tx 4
+#define GPS_Rx 35
+#define GPS_Tx 34
+#define SDA_PIN 33
+#define SCL_PIN 32
+#define HC12_Set 15
 #define SD_CS_PIN 5
-#define HC12 Serial2 //Hardware serial 2 on the ESP32
-static const int RXPin = 14, TXPin = 12;
 static const uint32_t GPSBaud = 9600;
 
 char serialZnak;
@@ -33,18 +32,14 @@ unsigned long lastTransmissionTime = 0;
 Adafruit_BME280 bme;
 TinyGPSPlus gps;
 
-SoftwareSerial ss(RXPin, TXPin);
-File dataFile;
+SoftwareSerial HC12(12, 13);
+SoftwareSerial GPSs(GPS_Rx, GPS_Tx);
+File myFile;
 void setup()
 {
-<<<<<<< HEAD
-  Serial.begin(2400);
-  if (!bme.begin(0x76))
-=======
   Serial.begin(9600);
   Wire.begin(SDA_PIN, SCL_PIN);
   if (!bme.begin(0x76, &Wire))
->>>>>>> 96af93c3e8fb9c24fde2a487488d1ee770060d53
   {
     Serial.println("BME280 sensor not found. Check wiring!");
     while (1);
@@ -54,27 +49,26 @@ void setup()
         sdEnabled = false;
         return;
     }
-  dataFile = SD.open("/data.csv", FILE_WRITE);
-  if (!dataFile) {
+  myFile = SD.open("test.txt", FILE_WRITE);
+  myFile.print("negr");
+  myFile.close();
+  /*myFile = SD.open("/data.csv", FILE_WRITE);
+  if (!myFile) {
     Serial.println("Error opening data.csv");
   } 
   else {
     // Check if file is empty
-    if (dataFile.size() == 0) {
+    if (myFile.size() == 0) {
       // Write header to the file
-      dataFile.println("Temperature;Humidity;Pressure;Latitude;Longitude;Time;Speed;Altitude;");
+      myFile.println("Temperature;Humidity;Pressure;Latitude;Longitude;Time;Speed;Altitude;");
     }
-    dataFile.close(); // Close the file after writing header
-  }
-  pinMode(pinSet, OUTPUT);
-  digitalWrite(pinSet, HIGH);
+    myFile.close(); // Close the file after writing header
+  }*/
+  pinMode(HC12_Set, OUTPUT);
+  digitalWrite(HC12_Set, HIGH);
   delay(80);
-<<<<<<< HEAD
-  HC12.begin(2400, SERIAL_8N1, RXD2, TXD2);
-=======
-  HC12.begin(9600, SERIAL_8N1, RXD2, TXD2);
-  ss.begin(GPSBaud);
->>>>>>> 96af93c3e8fb9c24fde2a487488d1ee770060d53
+  HC12.begin(9600);
+  GPSs.begin(GPSBaud);
 }
 
 void loop()
@@ -131,12 +125,12 @@ void loop()
     {
       HC12.print(serialZprava);
       delay(100);
-      digitalWrite(pinSet, LOW);
+      digitalWrite(HC12_Set, LOW);
       delay(100);
       Serial.print(serialZprava);
       HC12.print(serialZprava);
       delay(500);
-      digitalWrite(pinSet, HIGH);
+      digitalWrite(HC12_Set, HIGH);
       delay(100);
     }
     else
@@ -163,14 +157,14 @@ void loop()
     else if (HC12Zprava.startsWith("AT")) 
      {
       // nastavení konfiguračního módu s pauzou pro zpracování
-      digitalWrite(pinSet, LOW);
+      digitalWrite(HC12_Set, LOW);
       delay(100);
       // vytištění konfigurační zprávy po sériové lince pro kontrolu
       Serial.print(serialZprava);
       // nastavení konfigurace pro lokálně připojený modul s pauzou pro zpracování
       HC12.print(HC12Zprava);
       delay(500);
-      digitalWrite(pinSet, HIGH);
+      digitalWrite(HC12_Set, HIGH);
       // přechod zpět do transparentního módu s pauzou na zpracování
       delay(100);
       // odeslání informace do druhého modulu o úspěšném novém nastavení
@@ -185,42 +179,89 @@ void loop()
     HC12KonecZpravy = false;
   }
 
-  
-  if (communicationEnabled && currentTime - lastTransmissionTime >= 100)
-    {
-      if (ss.available() > 0)
+    if (GPSs.available() > 0)
       {
-        if (gps.encode(ss.read()))
+        if (gps.encode(GPSs.read()))
         {
           if (gps.location.isValid())
           {
             // Transmit data via HC12
-            transmitDataHC12();
-
+            //transmitDataHC12();
+            /*myFile = SD.open("test.txt", FILE_WRITE);
+             myFile.println("negr1");
+             myFile.close();
+             */
             // Write data to SD card
-            if (sdEnabled) {
+            /*if (sdEnabled) {
               writeDataToFile();
             }
             // Print data to Serial
             printDataToSerial();
-
-            lastTransmissionTime = currentTime;
-          }
+          }*/
+          /*
           else
           {
             Serial.println(F("INVALID"));
-          }
+            HC12.println(F("NEGR"));
+          }*/
           
         }
       }
+    else{
+      printBME();
+      writeSD();
+      delay(5000);
+    }
+  }
+}
+void printBME() {
+  HC12.print(bme.readTemperature());
+  HC12.print(";");
+  HC12.print(bme.readHumidity());
+  HC12.print(";");
+  HC12.print(bme.readPressure() / 100.0F);
+  HC12.println();
+
+  Serial.print(bme.readTemperature());
+  Serial.print(";");
+  Serial.print(bme.readHumidity());
+  Serial.print(";");
+  Serial.print(bme.readPressure() / 100.0F);
+  Serial.println();
+}
+void writeSD(){
+  // Open a file. Note that only one file can be open at a time,
+    // so you have to close this one before opening another.
+
+    myFile = SD.open("/test.csv", FILE_APPEND);
+
+    // if the file opened okay, write to it.
+    if (myFile) 
+    {
+      Serial.print("Writing to test.csv...");
+      myFile.print(bme.readTemperature());
+      myFile.print(";");
+      myFile.print(bme.readHumidity());
+      myFile.print(";");
+      myFile.print(bme.readPressure() / 100.0F);
+      myFile.println();
+      // close the file:
+      myFile.close();
+      Serial.println("done.");
+    } 
+    else 
+    {
+
+      // if the file didn't open, print an error.
+      Serial.println("error opening test.csv");
+
     }
 }
-
 void transmitDataHC12() {
   // Code to transmit data via HC12
       HC12.print(bme.readTemperature());
-      HC12.print(bme.readHumidity());
       HC12.print(";");
+      HC12.print(bme.readHumidity());
       HC12.print(";");
       HC12.print(bme.readPressure() / 100.0F);
       HC12.print(";");
@@ -244,34 +285,37 @@ void transmitDataHC12() {
 
 void writeDataToFile() {
   // Write data to the file
-  dataFile = SD.open("/data.csv", FILE_APPEND);
-  if (dataFile) {
-    dataFile.print(bme.readTemperature());
-    dataFile.print(";");
-    dataFile.print(bme.readHumidity());
-    dataFile.print(";");
-    dataFile.print(bme.readPressure() / 100.0F);
-    dataFile.print(";");
-    dataFile.print(gps.location.lat(), 6);
-    dataFile.print(F(";"));
-    dataFile.print(gps.location.lng(), 6);
-    dataFile.print(F(";"));
-    dataFile.print(gps.time.hour());
-    dataFile.print(F(":"));
-    dataFile.print(gps.time.minute());
-    dataFile.print(F(":"));
-    dataFile.print(gps.time.second());
-    dataFile.print(F("."));
-    dataFile.print(gps.time.centisecond());
-    dataFile.print(";");
-    dataFile.print(gps.speed.kmph());
-    dataFile.print(";");
-    dataFile.print(gps.altitude.meters());
-    dataFile.println();
-    dataFile.close();
+  myFile = SD.open("test.txt", FILE_WRITE);
+  if (myFile) {
+    Serial.println(F("okkk"));
+     myFile.println("negr1");
+    myFile.print(bme.readTemperature() );
+    myFile.print(";");
+    myFile.print(bme.readHumidity());
+    myFile.print(";");
+    myFile.print(bme.readPressure() / 100.0F);
+    myFile.print(";");
+    myFile.print(gps.location.lat(), 6);
+    myFile.print(F(";"));
+    myFile.print(gps.location.lng(), 6);
+    myFile.print(F(";"));
+    myFile.print(gps.time.hour());
+    myFile.print(F(":"));
+    myFile.print(gps.time.minute());
+    myFile.print(F(":"));
+    myFile.print(gps.time.second());
+    myFile.print(F("."));
+    myFile.print(gps.time.centisecond());
+    myFile.print(";");
+    myFile.print(gps.speed.kmph());
+    myFile.print(";");
+    myFile.print(gps.altitude.meters());
+    myFile.println();
+    myFile.close();
   }
   else {
-    dataFile.close();
+    Serial.println(F("negr"));
+    myFile.close();
   }
 }
 
