@@ -22,7 +22,7 @@ Adafruit_BME280 bme;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(2400);
   if (!bme.begin(0x76))
   {
     Serial.println("BME280 sensor not found. Check wiring!");
@@ -32,7 +32,7 @@ void setup()
   pinMode(pinSet, OUTPUT);
   digitalWrite(pinSet, HIGH);
   delay(80);
-  HC12.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  HC12.begin(2400, SERIAL_8N1, RXD2, TXD2);
 }
 
 void loop()
